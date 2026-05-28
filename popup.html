@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --primary: #0052CC;
+      --primary-hover: #0065FF;
+      --success: #00875A;
+      --bg: #F4F5F7;
+      --card-bg: #FFFFFF;
+      --text: #172B4D;
+      --text-sub: #5E6C84;
+    }
+
+    body {
+      width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+    }
+
+    /* Card Design */
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Buttons */
+    button {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.1s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button.primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    button.primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button.primary:disabled {
+      background-color: #EBECF0;
+      color: #A5ADBA;
+      cursor: not-allowed;
+    }
+
+    button.success {
+      background-color: var(--success);
+      color: white;
+      box-shadow: 0 4px 0 #006644;
+      transform: translateY(-2px);
+    }
+
+    button.success:hover {
+      background-color: #006644;
+    }
+
+    button.success:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    button.success:disabled {
+      background-color: #EBECF0;
+      color: #A5ADBA;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* Inputs & Selects */
+    .input-group {
+      text-align: left;
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid #DFE1E6;
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--text);
+      box-sizing: border-box;
+      transition: border 0.2s;
+      background: white;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    /* Chips */
+    #date-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+      justify-content: center;
+    }
+
+    .chip {
+      background: #EBECF0;
+      color: var(--text-sub);
+      padding: 6px 10px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .chip:hover {
+      background: #DFE1E6;
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+
+    .chip.active {
+      background: #E3FCEF;
+      color: #006644;
+      border-color: #006644;
+      font-weight: 600;
+      box-shadow: 0 0 0 2px rgba(0, 102, 68, 0.15);
+    }
+
+    .chip-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .chip-actions button {
+      width: auto;
+      padding: 4px 10px;
+      font-size: 10px;
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+
+    .chip-actions button:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Messages */
+    #message {
+      margin-top: 12px;
+      font-size: 12px;
+      min-height: 18px;
+    }
+
+    .success {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .error {
+      color: #DE350B;
+      font-weight: 600;
+    }
+
+    .normal {
+      color: var(--text-sub);
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(0, 135, 90, 0.4);
+      }
+
+      70% {
+        box-shadow: 0 0 0 10px rgba(0, 135, 90, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(0, 135, 90, 0);
+      }
+    }
+
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+
+    /* Row layout */
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .row > .input-group {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    <div class="logo">
+      <span>⏱️</span> Tempo Helper
+    </div>
+    <div id="mode-badge" class="badge">Loading...</div>
+  </div>
+
+  <!-- CAPTURE CARD -->
+  <div id="capture-section" class="card" style="display:none;">
+    <div style="margin-bottom: 20px;">
+      <div style="font-size: 40px; margin-bottom: 10px;">📡</div>
+      <div style="font-weight: 600; font-size: 16px;">Jira Detected</div>
+      <div style="font-size: 12px; color: var(--text-sub);">Ready to capture this week's data</div>
+    </div>
+    <button id="captureBtn" class="primary">Capture Data</button>
+  </div>
+
+  <!-- FILL CARD -->
+  <div id="fill-section" class="card" style="display:none;">
+
+    <!-- Available Data -->
+    <div class="input-group">
+      <label style="font-size:11px; font-weight:700; color: var(--primary); letter-spacing:0.03em;">📅 SELECT DAYS TO FILL</label>
+      <div style="font-size:10px; color:#888; margin-bottom:6px;">
+        Today is auto-selected. Click chips to toggle. Already-filled days will be skipped automatically.
+      </div>
+      <div class="chip-actions">
+        <button id="todayOnlyBtn" title="Select only today">⭐ Today Only</button>
+        <button id="selectAllBtn">Select All</button>
+        <button id="clearAllBtn">Clear All</button>
+      </div>
+      <div id="date-chips">
+        <!-- JS injects chips here -->
+        <span class="chip">Start Capture First</span>
+      </div>
+    </div>
+
+    <!-- Project + Start Time Row -->
+    <div class="row">
+      <div class="input-group" style="flex: 1.4;">
+        <label>Project</label>
+        <select id="projectSelect">
+          <option value="JoinFast">JoinFast</option>
+          <option value="Interview Agent">Interview Agent</option>
+        </select>
+      </div>
+      <div class="input-group" style="flex: 0.6;">
+        <label>Start Time</label>
+        <input type="time" id="startTimeConfig" value="09:30">
+      </div>
+    </div>
+
+    <button id="fillBtn" class="success" disabled>
+      <span>⚡</span> Select dates above
+    </button>
+
+    <div style="margin-top: 10px; font-size: 10px; color: #aaa;">
+      TalentFlow: each Tempo card → separate &ldquo;Log Time&rdquo; entry • Skips duplicates
+    </div>
+  </div>
+
+  <div id="message"></div>
+
+  <script src="scripts/smartMapper.js"></script>
+  <script src="popup.js"></script>
+</body>
+
+</html>
