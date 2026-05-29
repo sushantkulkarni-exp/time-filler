@@ -640,7 +640,7 @@ function findBestCell(colEl, topPx) {
  */
 function reactSet(element, value) {
     element.focus();
-    element.value = value; // direct assignment backup
+    var lastValue = element.value;
 
     var tag = element.tagName.toUpperCase();
     var proto = tag === 'TEXTAREA'
@@ -649,14 +649,22 @@ function reactSet(element, value) {
     var setter = Object.getOwnPropertyDescriptor(proto, 'value');
     if (setter && setter.set) {
         setter.set.call(element, value);
+    } else {
+        element.value = value;
     }
     
-    // React 16+ needs native event dispatch
+    // React 16+ needs the tracker to be reset so it notices the native value change
+    var tracker = element._valueTracker;
+    if (tracker) {
+        tracker.setValue(lastValue);
+    }
+
     var inputEv = new Event('input', { bubbles: true, cancelable: true });
+    inputEv.simulated = true;
     element.dispatchEvent(inputEv);
+    
     element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
-    element.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', bubbles: true }));
+    element.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
     element.blur();
 }
 
@@ -676,7 +684,7 @@ function buildTitle(task) {
  */
 function mapActivity(category) {
     var c = (category || "").toLowerCase();
-    if (c.includes("meeting") || c.includes("interview") || c.includes("call") || c.includes("sync")) return "Meeting";
+    if (c.includes("meeting") || c.includes("interview") || c.includes("call") || c.includes("sync") || c.includes("demo")) return "Meeting";
     if (c.includes("code review") || c.includes("review")) return "Code Review";
     if (c.includes("test")) return "Testing";
     if (c.includes("design")) return "Design";

@@ -98,7 +98,7 @@ var SmartMapper = {
    */
   guessCategory: function (summary) {
     var s = summary.toLowerCase();
-    if (s.includes("standup") || s.includes("meet") || s.includes("sync") || s.includes("call") || s.includes("dsm")) {
+    if (s.includes("standup") || s.includes("meet") || s.includes("sync") || s.includes("call") || s.includes("dsm") || s.includes("demo")) {
       return "Meeting";
     }
     if (s.includes("review") || s.includes("pr ")) {
