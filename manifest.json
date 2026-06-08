@@ -26,6 +26,26 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.atlassian.net/*",
+        "*://*.tempo.io/*"
+      ],
+      "js": ["scripts/tempoCapture.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["scripts/tempoInject.js"],
+      "matches": [
+        "*://*.atlassian.net/*",
+        "*://*.tempo.io/*"
+      ]
+    }
+  ],
   "commands": {
     "capture_data": {
       "suggested_key": {

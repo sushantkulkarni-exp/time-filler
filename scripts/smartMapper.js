@@ -10,7 +10,23 @@ var SmartMapper = {
     defaultCategory: "Development",
     taskDurationGap: 0,
     excludeWeekend: true,
-    minDurationMinutes: 15 // Minimum task duration to avoid zero-length entries
+    minDurationMinutes: 15, // Minimum task duration to avoid zero-length entries
+    slotMinutes: 30         // Calendar grid resolution; durations snap up to this
+  },
+
+  /**
+   * Round a duration UP to the next slot boundary (30 min).
+   * This prevents time-slot collisions: when tasks are laid back-to-back,
+   * snapping every duration to a multiple of 30 keeps each consecutive start
+   * on a distinct 30-min grid slot, so a later task never clicks onto the
+   * card of an earlier one. e.g. 15m -> 30m, 45m -> 1h, 1h15m -> 1h30m.
+   * @param {number} mins
+   * @returns {number} minutes rounded up to a multiple of slotMinutes
+   */
+  roundUpToSlot: function (mins) {
+    var slot = SmartMapper.config.slotMinutes || 30;
+    if (!mins || mins < slot) return slot; // also enforces a sane minimum
+    return Math.ceil(mins / slot) * slot;
   },
 
   /**
@@ -63,12 +79,12 @@ var SmartMapper = {
     var currentTime = SmartMapper.config.startTime;
 
     return tasks.map(function (task) {
-      var durationMins = SmartMapper.parseDuration(task.duration);
+      var rawMins = SmartMapper.parseDuration(task.duration);
 
-      // Enforce minimum duration so we never get zero-length task entries
-      if (durationMins < SmartMapper.config.minDurationMinutes) {
-        durationMins = SmartMapper.config.minDurationMinutes;
-      }
+      // Snap duration up to the 30-min grid (15m -> 30m, 45m -> 1h). This both
+      // enforces a sane minimum AND keeps back-to-back tasks on distinct grid
+      // slots so they don't collide when clicked onto the calendar.
+      var durationMins = SmartMapper.roundUpToSlot(rawMins);
 
       var startTime = currentTime;
       var endTime = SmartMapper.addMinutes(currentTime, durationMins);

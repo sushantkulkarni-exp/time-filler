@@ -225,16 +225,35 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (captureBtn) {
         captureBtn.addEventListener('click', async function () {
             captureBtn.disabled = true;
-            showMessage("Scanning all frames...", "normal");
+            showMessage("Reading captured Tempo network data…", "normal");
 
             try {
-                // Inject scraper into all frames
+                // ── PRIMARY: complete API-interception capture ──────────────
+                // background.js buffers every worklog response Tempo loads
+                // (including cards never painted in the DOM) and resolves Jira
+                // keys/summaries. This is what fixes "some tasks not filled".
+                var built = await sendMessage({ type: "build-tempo-data" });
+
+                if (built && built.ok && built.taskCount > 0) {
+                    showMessage(
+                        "✅ Captured " + built.dayCount + " days, " +
+                        built.taskCount + " tasks (network capture). Saved.",
+                        "success"
+                    );
+                    setTimeout(function () { window.close(); }, 1600);
+                    return;
+                }
+
+                // ── FALLBACK: legacy DOM scrape ─────────────────────────────
+                // Used when the network hook captured nothing yet — usually
+                // because the Tempo tab wasn't reloaded after install/update.
+                showMessage("No network data yet — scanning visible cards…", "normal");
+
                 await chrome.scripting.executeScript({
                     target: { tabId: tab.id, allFrames: true },
                     files: ['scripts/tempoScraper.js']
                 });
 
-                // Execute the scraper function in all frames
                 var results = await chrome.scripting.executeScript({
                     target: { tabId: tab.id, allFrames: true },
                     func: function () {
@@ -243,7 +262,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                     }
                 });
 
-                // Find the valid result (the frame that had tempo cards)
                 var validResult = null;
                 for (var i = 0; i < results.length; i++) {
                     var r = results[i];
@@ -262,18 +280,77 @@ document.addEventListener('DOMContentLoaded', async function () {
                         totalTasks += data[days[j]].length;
                     }
 
-                    // Save to storage
                     await chrome.storage.local.set({ tempoData: data });
-                    showMessage("✅ Found " + dayCount + " days, " + totalTasks + " tasks! Saved.", "success");
-                    setTimeout(function () { window.close(); }, 1500);
+                    showMessage(
+                        "✅ Found " + dayCount + " days, " + totalTasks +
+                        " tasks (visible cards). Tip: reload the Tempo tab so the " +
+                        "network capture can grab the full week.",
+                        "success"
+                    );
+                    setTimeout(function () { window.close(); }, 2200);
                 } else {
-                    showMessage("Failed: No Tempo cards found in any frame.", "error");
+                    showMessage(
+                        "Failed: no Tempo data found. Reload the Tempo tab once " +
+                        "(the capture hook installs on load), navigate the weeks, then retry.",
+                        "error"
+                    );
                     captureBtn.disabled = false;
                 }
             } catch (e) {
                 showMessage("Error: " + e.message, "error");
                 captureBtn.disabled = false;
             }
+        });
+    }
+
+    // Promise wrapper around chrome.runtime.sendMessage.
+    function sendMessage(payload) {
+        return new Promise(function (resolve) {
+            try {
+                chrome.runtime.sendMessage(payload, function (resp) {
+                    if (chrome.runtime.lastError) { resolve(null); return; }
+                    resolve(resp);
+                });
+            } catch (e) { resolve(null); }
+        });
+    }
+
+    // ── Export captured data as JSON (diagnostic) ───────────────────────────
+    var exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', async function () {
+            exportBtn.disabled = true;
+            showMessage("Building export…", "normal");
+
+            var resp = await sendMessage({ type: "tempo-export" });
+            if (!resp || !resp.ok || !resp.export) {
+                showMessage("Export failed — reload the Tempo tab, then retry.", "error");
+                exportBtn.disabled = false;
+                return;
+            }
+
+            var data = resp.export;
+            var stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            var json = JSON.stringify(data, null, 2);
+
+            // Download via a blob URL + anchor (no "downloads" permission needed).
+            var blob = new Blob([json], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'tempo-capture-' + stamp + '.json';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1500);
+
+            var s = data.summary || {};
+            showMessage(
+                "✅ Exported " + (s.tasks || 0) + " tasks / " + (s.days || 0) +
+                " days. Endpoints seen: " + (s.jsonEndpointsSeen || 0) +
+                " (" + (s.matchedEndpoints || 0) + " matched).",
+                "success"
+            );
+            exportBtn.disabled = false;
         });
     }
 
