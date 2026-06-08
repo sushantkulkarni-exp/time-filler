@@ -183,6 +183,23 @@ function fmt(d) {
 }
 function pad(n) { return String(n).padStart(2,'0'); }
 
+/** UI shows "Jun 02" (zero-padded day), not "Jun 2". */
+function formatDayHeader(dateStr) {
+    var parts = dateStr.split('-');
+    var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return MONTHS[parseInt(parts[1], 10) - 1] + ' ' + pad(parseInt(parts[2], 10));
+}
+
+function dayHeaderMatches(txt, dateStr) {
+    var parts = dateStr.split('-');
+    var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var month = MONTHS[parseInt(parts[1], 10) - 1];
+    var day = parseInt(parts[2], 10);
+    var m = (txt || '').trim().match(/^(\w{3})\s+0*(\d{1,2})$/);
+    if (!m) return txt === formatDayHeader(dateStr);
+    return m[1] === month && parseInt(m[2], 10) === day;
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // FILL A SINGLE TASK
 // ══════════════════════════════════════════════════════════════════════════════
@@ -447,11 +464,9 @@ async function openAndSelect(triggerBtn, value) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function clickTimeSlot(dateStr, timeStr) {
-    var parts = dateStr.split('-');
-    var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var headerText = MONTHS[parseInt(parts[1])-1] + ' ' + parseInt(parts[2]);
+    var headerText = formatDayHeader(dateStr);
 
-    var col = findDayColumn(headerText);
+    var col = findDayColumn(dateStr);
     if (!col) {
         console.error("  ❌ Column not found for: " + headerText);
         return false;
@@ -551,34 +566,46 @@ async function scrollToSlot(colEl, topPx) {
 }
 
 /**
- * Find a day column by matching the date text ("May 25") in the sticky header.
+ * Find a day column by matching the date text ("Jun 02") in the sticky header.
  * Uses multiple strategies to be robust.
  */
-function findDayColumn(headerText) {
-    // Strategy 1: Find sticky header containing the date text
+function findDayColumn(dateStr) {
+    var headerText = formatDayHeader(dateStr);
+
+    function columnFromDateEl(dateEl) {
+        var el = dateEl;
+        while (el && el !== document.body) {
+            if (el.querySelector('[style*="height: 1344px"]')) return el;
+            el = el.parentElement;
+        }
+        return null;
+    }
+
+    // Strategy 1: date label spans in column headers (e.g. "Jun 02")
+    var dateSpans = document.querySelectorAll('span.text-xs');
+    for (var s = 0; s < dateSpans.length; s++) {
+        var spanTxt = (dateSpans[s].innerText || dateSpans[s].textContent || '').trim();
+        if (!dayHeaderMatches(spanTxt, dateStr)) continue;
+        var col = columnFromDateEl(dateSpans[s]);
+        if (col) return col;
+    }
+
+    // Strategy 2: sticky header whose text includes the date
     var stickies = document.querySelectorAll('[class*="sticky"]');
     for (var i = 0; i < stickies.length; i++) {
-        if ((stickies[i].innerText || '').includes(headerText)) {
-            // Walk UP to find a column-level div (has a time grid child)
-            var el = stickies[i];
-            while (el && el !== document.body) {
-                // The column div has a child with style="height: 1344px"
-                if (el.querySelector('[style*="height: 1344px"]')) return el;
-                el = el.parentElement;
-            }
-        }
+        var stickyTxt = (stickies[i].innerText || '').trim();
+        if (stickyTxt.indexOf(headerText) === -1) continue;
+        var col2 = columnFromDateEl(stickies[i]);
+        if (col2) return col2;
     }
-    // Strategy 2: Find any span/div with exactly "May 25" text
+
+    // Strategy 3: any span/div with matching date text
     var allEls = document.querySelectorAll('span, div');
     for (var j = 0; j < allEls.length; j++) {
         var txt = (allEls[j].innerText || allEls[j].textContent || '').trim();
-        if (txt === headerText) {
-            var el2 = allEls[j];
-            while (el2 && el2 !== document.body) {
-                if (el2.querySelector('[style*="height: 1344px"]')) return el2;
-                el2 = el2.parentElement;
-            }
-        }
+        if (!dayHeaderMatches(txt, dateStr) && txt !== headerText) continue;
+        var col3 = columnFromDateEl(allEls[j]);
+        if (col3) return col3;
     }
     return null;
 }
@@ -703,10 +730,7 @@ function roundToHalfHour(timeStr) {
  * (e.g., two 1h "standup" tasks on the same day).
  */
 function isDuplicateTask(dateStr, task, allTasksForDay, currentTaskIndex) {
-    var p = dateStr.split('-');
-    var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var headerText = MONTHS[parseInt(p[1])-1] + ' ' + parseInt(p[2]);
-    var col = findDayColumn(headerText);
+    var col = findDayColumn(dateStr);
     if (!col) return false;
 
     var cards = col.querySelectorAll('[class*="rounded-md"]');
