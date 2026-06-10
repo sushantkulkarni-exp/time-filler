@@ -279,7 +279,8 @@ chrome.commands.onCommand.addListener(async function (command) {
 
     // ── Alt+F: Fill today on TalentFlow ─────────────────────────────
     if (command === "fill_data") {
-        var today = new Date().toISOString().split('T')[0];
+        var now = new Date();
+        var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         try {
             var storage = await chrome.storage.local.get(['tempoData', 'startTime', 'selectedProject']);
             var tempoData = storage.tempoData;

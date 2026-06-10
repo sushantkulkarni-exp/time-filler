@@ -21,10 +21,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     var selectAllBtn = document.getElementById('selectAllBtn');
     var clearAllBtn = document.getElementById('clearAllBtn');
     var todayOnlyBtn = document.getElementById('todayOnlyBtn');
-    var today = new Date().toISOString().split('T')[0];
+    var today = getLocalToday();
 
     // Track which dates are selected
     var selectedDates = new Set();
+
+    function getLocalToday() {
+        var d = new Date();
+        var yyyy = d.getFullYear();
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var dd = String(d.getDate()).padStart(2, '0');
+        return yyyy + '-' + mm + '-' + dd;
+    }
 
     // 1. Query active tab
     var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
