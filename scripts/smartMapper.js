@@ -68,6 +68,20 @@ var SmartMapper = {
     return String(newH).padStart(2, '0') + ':' + String(newM).padStart(2, '0');
   },
 
+  normalizeTimeString: function (timeStr) {
+    if (!timeStr || typeof timeStr !== 'string') return "";
+    var parts = timeStr.split(':');
+    if (parts.length < 2) return "";
+    var h = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return "";
+    if (h < 0) h = 0;
+    if (h > 23) h = 23;
+    if (m < 0) m = 0;
+    if (m > 59) m = 59;
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  },
+
   /**
    * Process a list of raw tasks for a single day to add start/end times
    * @param {Array} tasks - Array of task objects { summary, duration, ... }
@@ -76,7 +90,7 @@ var SmartMapper = {
   processDay: function (tasks) {
     if (!tasks || !Array.isArray(tasks) || tasks.length === 0) return [];
 
-    var currentTime = SmartMapper.config.startTime;
+    var currentTime = SmartMapper.normalizeTimeString(SmartMapper.config.startTime) || "09:00";
 
     return tasks.map(function (task) {
       var rawMins = SmartMapper.parseDuration(task.duration);
@@ -85,11 +99,11 @@ var SmartMapper = {
       // enforces a sane minimum AND keeps back-to-back tasks on distinct grid
       // slots so they don't collide when clicked onto the calendar.
       var durationMins = SmartMapper.roundUpToSlot(rawMins);
+      var requestedStart = SmartMapper.normalizeTimeString(task.startTime);
+      var startTime = requestedStart || currentTime;
+      var endTime = SmartMapper.addMinutes(startTime, durationMins);
 
-      var startTime = currentTime;
-      var endTime = SmartMapper.addMinutes(currentTime, durationMins);
-
-      // Add gap between tasks
+      // Add gap between tasks when the task is laid out sequentially.
       currentTime = SmartMapper.addMinutes(endTime, SmartMapper.config.taskDurationGap);
 
       return {
@@ -114,20 +128,8 @@ var SmartMapper = {
    */
   guessCategory: function (summary) {
     var s = summary.toLowerCase();
-    if (s.includes("standup") || s.includes("meet") || s.includes("sync") || s.includes("call") || s.includes("dsm") || s.includes("demo")) {
+    if (s.includes("standup") || s.includes("meet") || s.includes("sync") || s.includes("call") || s.includes("dsm") || s.includes("demo") || s.includes("interview")) {
       return "Meeting";
-    }
-    if (s.includes("review") || s.includes("pr ")) {
-      return "Code Review";
-    }
-    if (s.includes("deploy") || s.includes("release")) {
-      return "Deployment";
-    }
-    if (s.includes("break") || s.includes("lunch")) {
-      return "Break";
-    }
-    if (s.includes("interview")) {
-      return "Interview";
     }
     return SmartMapper.config.defaultCategory;
   }
