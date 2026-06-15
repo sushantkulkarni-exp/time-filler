@@ -213,7 +213,7 @@ async function fillSingleTask(dateStr, task) {
     var hours      = Math.floor(durationM / 60);
     var mins       = Math.round((durationM % 60) / 15) * 15; // round to 0,15,30,45
     if (mins >= 60) { hours++; mins = 0; }
-    var startLabel = roundToHalfHour(startTime); // "HH:MM" rounded to nearest :00 or :30
+    var startLabel = formatTimeHHMM(startTime); // exact "HH:MM" to preserve 15-minute values
 
     console.log('  → "' + title + '" | ' + project + ' | ' + activity +
                 ' | ' + startLabel + ' | ' + hours + 'h ' + mins + 'm');
@@ -703,10 +703,7 @@ function buildTitle(task) {
  */
 function mapActivity(category) {
     var c = (category || "").toLowerCase();
-    if (c.includes("meeting") || c.includes("interview") || c.includes("call") || c.includes("sync")) return "Meeting";
-    if (c.includes("code review") || c.includes("review")) return "Code Review";
-    if (c.includes("test")) return "Testing";
-    if (c.includes("design")) return "Design";
+    if (c.includes("meeting") || c.includes("interview") || c.includes("call") || c.includes("sync") || c.includes("demo")) return "Meeting";
     return "Development";
 }
 
@@ -714,10 +711,27 @@ function mapActivity(category) {
  * Round a "HH:MM" string to the nearest :00 or :30 boundary.
  * Used for clicking time slots AND for the Start Time dropdown.
  */
+function formatTimeHHMM(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string') return "09:00";
+    var parts = timeStr.split(':');
+    if (parts.length < 2) return "09:00";
+    var hours = parseInt(parts[0], 10);
+    var mins = parseInt(parts[1], 10);
+    if (isNaN(hours) || isNaN(mins)) return "09:00";
+    if (hours < 0) hours = 0;
+    if (hours > 23) hours = 23;
+    if (mins < 0) mins = 0;
+    if (mins > 59) mins = 59;
+    return pad(hours) + ':' + pad(mins);
+}
+
 function roundToHalfHour(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string') return "09:00";
     var p = timeStr.split(':');
-    var h = parseInt(p[0]);
-    var m = parseInt(p[1]);
+    if (p.length < 2) return "09:00";
+    var h = parseInt(p[0], 10);
+    var m = parseInt(p[1], 10);
+    if (isNaN(h) || isNaN(m)) return "09:00";
     var rm = m < 15 ? 0 : (m < 45 ? 30 : 0);
     var rh = m >= 45 ? h + 1 : h;
     if (rh >= 24) rh = 23;
