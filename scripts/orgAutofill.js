@@ -667,7 +667,7 @@ function findBestCell(colEl, topPx) {
  */
 function reactSet(element, value) {
     element.focus();
-    var lastValue = element.value;
+    element.value = value; // direct assignment backup
 
     var tag = element.tagName.toUpperCase();
     var proto = tag === 'TEXTAREA'
@@ -676,22 +676,14 @@ function reactSet(element, value) {
     var setter = Object.getOwnPropertyDescriptor(proto, 'value');
     if (setter && setter.set) {
         setter.set.call(element, value);
-    } else {
-        element.value = value;
     }
     
-    // React 16+ needs the tracker to be reset so it notices the native value change
-    var tracker = element._valueTracker;
-    if (tracker) {
-        tracker.setValue(lastValue);
-    }
-
+    // React 16+ needs native event dispatch
     var inputEv = new Event('input', { bubbles: true, cancelable: true });
-    inputEv.simulated = true;
     element.dispatchEvent(inputEv);
-    
     element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-    element.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    element.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', bubbles: true }));
     element.blur();
 }
 
