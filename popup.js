@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     var selectAllBtn = document.getElementById('selectAllBtn');
     var clearAllBtn = document.getElementById('clearAllBtn');
     var todayOnlyBtn = document.getElementById('todayOnlyBtn');
+    var floatingPanelToggle = document.getElementById('floatingPanelToggle');
     var today = getLocalToday();
 
     // Track which dates are selected
@@ -52,13 +53,16 @@ document.addEventListener('DOMContentLoaded', async function () {
     );
 
     // Load stored settings/data
-    var storage = await chrome.storage.local.get(['tempoData', 'startTime', 'selectedProject']);
+    var storage = await chrome.storage.local.get(['tempoData', 'startTime', 'selectedProject', 'showFloatingTempoHelper']);
 
     if (storage.startTime && startTimeInput) {
         startTimeInput.value = storage.startTime;
     }
     if (storage.selectedProject && projectSelect) {
         projectSelect.value = storage.selectedProject;
+    }
+    if (floatingPanelToggle) {
+        floatingPanelToggle.checked = storage.showFloatingTempoHelper === true;
     }
 
     // 2. SMART UI SWITCHING
@@ -78,6 +82,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             modeBadge.style.background = "#E3FCEF";
             modeBadge.style.color = "#006644";
         }
+
+        renderDateChips(storage.tempoData);
     } else {
         if (captureSection) captureSection.style.display = 'none';
         if (fillSection) fillSection.style.display = 'block';
@@ -101,11 +107,31 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    if (clearAllBtn) {
-        clearAllBtn.addEventListener('click', function () {
+    function resetAllData() {
+        return (async function () {
             selectedDates.clear();
+
+            try {
+                await sendMessage({ type: "tempo-clear-all-data" });
+            } catch (e) {}
+
+            try {
+                await new Promise(function (resolve) {
+                    chrome.storage.local.clear(function () { resolve(); });
+                });
+            } catch (e) {}
+
+            storage = {};
+            renderDateChips(null);
             refreshChipStyles();
             updateFillButton();
+            showMessage("All saved data and cache cleared. You can start fresh.", "success");
+        })();
+    }
+
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', async function () {
+            await resetAllData();
         });
     }
     // Today Only button
@@ -130,6 +156,18 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (projectSelect) {
         projectSelect.addEventListener('change', function () {
             chrome.storage.local.set({ selectedProject: projectSelect.value });
+        });
+    }
+
+    if (floatingPanelToggle) {
+        floatingPanelToggle.addEventListener('change', function () {
+            chrome.storage.local.set({ showFloatingTempoHelper: floatingPanelToggle.checked });
+            showMessage(
+                floatingPanelToggle.checked
+                    ? "Floating helper enabled. Reload the Tempo tab to show it."
+                    : "Floating helper hidden.",
+                floatingPanelToggle.checked ? "success" : "normal"
+            );
         });
     }
 
