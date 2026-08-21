@@ -268,6 +268,13 @@
     <div id="mode-badge" class="badge">Loading...</div>
   </div>
 
+  <div class="card" style="padding: 12px 14px; margin-bottom: 12px; text-align: left;">
+    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:var(--text-sub);">
+      <input type="checkbox" id="floatingPanelToggle" style="width:auto; margin:0;">
+      <span>Show floating Tempo helper on the page</span>
+    </label>
+  </div>
+
   <!-- CAPTURE CARD -->
   <div id="capture-section" class="card" style="display:none;">
     <div style="margin-bottom: 20px;">
@@ -290,7 +297,7 @@
       <div class="chip-actions">
         <button id="todayOnlyBtn" title="Select only today">⭐ Today Only</button>
         <button id="selectAllBtn">Select All</button>
-        <button id="clearAllBtn">Clear All</button>
+        <button id="clearAllBtn" title="Clear all captured data and cached lookups">Clear All Data</button>
       </div>
       <div id="date-chips">
         <!-- JS injects chips here -->

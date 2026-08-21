@@ -115,6 +115,54 @@ async function buildTempoDataFromCaptures(preferredTab, onProgress) {
     };
 }
 
+function findTalentFlowTab() {
+    return new Promise(function (resolve) {
+        chrome.tabs.query({
+            url: ["*://*.centralogic.ai/*", "*://*.talentflow.io/*", "*://*.talentflow/*"]
+        }, function (tabs) {
+            resolve((tabs && tabs[0]) || null);
+        });
+    });
+}
+
+async function fillSelectedDate(date, preferredTab) {
+    var storage = await chrome.storage.local.get(['tempoData', 'startTime', 'selectedProject']);
+    var tempoData = storage.tempoData;
+    var startTime = storage.startTime || "09:30";
+    var selectedProject = storage.selectedProject || "JoinFast";
+
+    if (!tempoData || !tempoData[date]) {
+        return { ok: false, error: "No data for the selected date." };
+    }
+
+    if (typeof SmartMapper !== 'undefined') {
+        SmartMapper.config.startTime = startTime;
+    }
+
+    var processedData = {};
+    processedData[date] = (typeof SmartMapper !== 'undefined')
+        ? SmartMapper.processDay(tempoData[date])
+        : tempoData[date];
+
+    var targetTab = preferredTab || await findTalentFlowTab();
+    if (!targetTab || !targetTab.id) {
+        return { ok: false, error: "Open the TalentFlow tab first." };
+    }
+
+    await chrome.scripting.executeScript({
+        target: { tabId: targetTab.id, allFrames: false },
+        files: ['scripts/orgAutofill.js']
+    });
+
+    chrome.tabs.sendMessage(targetTab.id, {
+        action: "fillOrgTimesheet",
+        tempoData: processedData,
+        projectName: selectedProject
+    });
+
+    return { ok: true, tabId: targetTab.id, date: date };
+}
+
 // ── message routing ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
@@ -154,11 +202,19 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
         return false;
     }
 
-    if (msg.type === "tempo-clear-captures") {
+    if (msg.type === "tempo-clear-captures" || msg.type === "tempo-clear-all-data") {
         seenMem = {};
-        setCaptures([]).then(function () {
+        chrome.storage.local.clear(function () {
             try { sendResponse({ ok: true }); } catch (e) { }
         });
+        return true;
+    }
+
+    if (msg.type === "fill-selected-date") {
+        (async function () {
+            var result = await fillSelectedDate(msg.date, sender && sender.tab);
+            try { sendResponse(result); } catch (e) { }
+        })();
         return true;
     }
 
@@ -282,37 +338,13 @@ chrome.commands.onCommand.addListener(async function (command) {
         var now = new Date();
         var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         try {
-            var storage = await chrome.storage.local.get(['tempoData', 'startTime', 'selectedProject']);
-            var tempoData = storage.tempoData;
-            var startTime = storage.startTime || "09:30";
-            var selectedProject = storage.selectedProject || "JoinFast";
-
-            if (!tempoData || !tempoData[today]) {
+            var result = await fillSelectedDate(today, tab);
+            if (!result.ok) {
                 chrome.action.setBadgeText({ text: "NO", tabId: tab.id });
                 chrome.action.setBadgeBackgroundColor({ color: "#DE350B" });
                 setTimeout(function () { chrome.action.setBadgeText({ text: "", tabId: tab.id }); }, 2000);
                 return;
             }
-
-            if (typeof SmartMapper !== 'undefined') {
-                SmartMapper.config.startTime = startTime;
-            }
-
-            var processedData = {};
-            processedData[today] = (typeof SmartMapper !== 'undefined')
-                ? SmartMapper.processDay(tempoData[today])
-                : tempoData[today];
-
-            await chrome.scripting.executeScript({
-                target: { tabId: tab.id, allFrames: false },
-                files: ['scripts/orgAutofill.js']
-            });
-
-            chrome.tabs.sendMessage(tab.id, {
-                action: "fillOrgTimesheet",
-                tempoData: processedData,
-                projectName: selectedProject
-            });
 
             chrome.action.setBadgeText({ text: "GO", tabId: tab.id });
             setTimeout(function () { chrome.action.setBadgeText({ text: "", tabId: tab.id }); }, 2000);
